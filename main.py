@@ -8,16 +8,45 @@ import genanki
 import os
 import sys
 import random
+import subprocess
+import platform
 
 class AnkiDeckCreatorApp(QWidget):
     def __init__(self):
         super().__init__()
         self.config_file = 'credentials.ini'
         self.load_credentials()
+        self.browsers = self.detect_browsers()  # Detect available browsers before initializing the UI
         self.initUI()
         self.save_location = ""
         self.deck_name = "duolingo_vocabulary"  # Default deck name
-        self.setWindowIcon(QIcon('app_icon.ico'))
+        self.setWindowIcon(QIcon('icon.ico'))
+
+    def detect_browsers(self):
+        browsers = []
+        system_platform = platform.system()
+    
+        if system_platform == "Windows":
+            # Check for Chromium/Chrome
+            if os.path.exists('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'):
+                browsers.append("Chromium")
+            # Check for Firefox
+            if os.path.exists('C:\\Program Files\\Mozilla Firefox\\firefox.exe'):
+                browsers.append("Firefox")
+
+        elif system_platform == "Linux":
+            if os.path.exists('/usr/bin/chromium-browser'):
+                browsers.append("Chromium")
+            if os.path.exists('/usr/bin/firefox'):
+                browsers.append("Firefox")
+
+        elif system_platform == "Darwin":  # macOS
+            if os.path.exists('/Applications/Google Chrome.app'):
+                browsers.append("Chromium")
+            if os.path.exists('/Applications/Firefox.app'):
+                browsers.append("Firefox")
+
+        return browsers
 
     def initUI(self):
         self.setWindowTitle("Duolanki")
@@ -28,8 +57,15 @@ class AnkiDeckCreatorApp(QWidget):
 
         # Dropdown for browser selection
         self.browser_dropdown = QComboBox(self)
-        self.browser_dropdown.addItem("Chromium")
-        self.browser_dropdown.addItem("Firefox")
+        self.browsers = self.detect_browsers()
+        self.browser_dropdown.addItems(self.browsers or ["No Browsers Found"])  # Add detected browsers or show message
+
+        # Button to manually choose browser executable only if no browsers are detected
+        if not self.browsers:
+            self.choose_browser_button = QPushButton("Choose Browser Executable", self)
+            self.choose_browser_button.clicked.connect(self.choose_browser_executable)
+        else:
+            self.choose_browser_button = None  # Set to None if no button is needed
 
         # Input for Duolingo login credentials
         self.username_input = QLineEdit(self)
@@ -61,6 +97,7 @@ class AnkiDeckCreatorApp(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(self.browser_label)
         layout.addWidget(self.browser_dropdown)
+        layout.addWidget(self.choose_browser_button)
         layout.addWidget(self.username_input)
         layout.addWidget(self.password_input)
         layout.addWidget(self.save_button)
@@ -69,6 +106,12 @@ class AnkiDeckCreatorApp(QWidget):
         layout.addWidget(self.start_button)
 
         self.setLayout(layout)
+
+    def choose_browser_executable(self):
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getOpenFileName(self, "Select Browser Executable", "", "Executables (*.exe);;All Files (*)", options=options)
+        if file_name:
+            self.log_output(f"Selected browser: {file_name}")
 
     def log_output(self, message):
         self.output_area.append(message)
@@ -189,10 +232,10 @@ class BackgroundTask(QThread):
             # Launch the selected browser without a profile
             if self.browser_choice == "Chromium":
                 self.log("Launching Chromium / Google Chrome...")
-                browser = await p.chromium.launch(headless=True)
+                browser = await p.chromium.launch(headless=False)
             elif self.browser_choice == "Firefox":
                 self.log("Launching Firefox...")
-                browser = await p.firefox.launch(headless=True)
+                browser = await p.firefox.launch(headless=False)
 
             page = await browser.new_page()
 
@@ -293,6 +336,6 @@ class BackgroundTask(QThread):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = AnkiDeckCreatorApp()
-    window.show()
+    ex = AnkiDeckCreatorApp()
+    ex.show()
     sys.exit(app.exec_())
