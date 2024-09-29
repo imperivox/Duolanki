@@ -189,10 +189,10 @@ class BackgroundTask(QThread):
             # Launch the selected browser without a profile
             if self.browser_choice == "Chromium":
                 self.log("Launching Chromium / Google Chrome...")
-                browser = await p.chromium.launch(headless=False)
+                browser = await p.chromium.launch(headless=True)
             elif self.browser_choice == "Firefox":
                 self.log("Launching Firefox...")
-                browser = await p.firefox.launch(headless=False)
+                browser = await p.firefox.launch(headless=True)
 
             page = await browser.new_page()
 
