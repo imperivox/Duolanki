@@ -97,7 +97,9 @@ class AnkiDeckCreatorApp(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(self.browser_label)
         layout.addWidget(self.browser_dropdown)
-        layout.addWidget(self.choose_browser_button)
+        # Only add the choose_browser_button if it's not None
+        if self.choose_browser_button:
+            layout.addWidget(self.choose_browser_button)
         layout.addWidget(self.username_input)
         layout.addWidget(self.password_input)
         layout.addWidget(self.save_button)
