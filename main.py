@@ -8,7 +8,6 @@ import genanki
 import os
 import sys
 import random
-import subprocess
 import platform
 
 class AnkiDeckCreatorApp(QWidget):
@@ -25,7 +24,7 @@ class AnkiDeckCreatorApp(QWidget):
     def detect_browsers(self):
         browsers = []
         system_platform = platform.system()
-    
+
         if system_platform == "Windows":
             # Check for Chromium/Chrome
             if os.path.exists('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'):
@@ -152,6 +151,14 @@ class AnkiDeckCreatorApp(QWidget):
             self.log_output(f"Save location set to: {file_name}")
 
     def create_deck(self):
+        if not self.start_button.isEnabled():
+            self.log_output("The program is still running, please wait.")
+            return
+
+        # Disable the button while the operation is running
+        self.start_button.setDisabled(True)
+        self.log_output("The button is now disabled while the program is running...")
+
         browser_choice = self.browser_dropdown.currentText()
         username = self.username_input.text()
         password = self.password_input.text()
@@ -185,14 +192,14 @@ class BackgroundTask(QThread):
     async def login_and_extract(self, page):
         self.log("Navigating to Duolingo login page...")
         await page.goto('https://www.duolingo.com/log-in')
-    
+
         self.log("Entering credentials...")
 
         # Enter username slowly
         await page.fill('input[data-test="email-input"]', '')
         for char in self.username:
             await page.type('input[data-test="email-input"]', char)
-            await asyncio.sleep(random.uniform(0.1, 0.2)) 
+            await asyncio.sleep(random.uniform(0.1, 0.2))
 
         # Enter password slowly
         await page.fill('input[data-test="password-input"]', '')
@@ -224,9 +231,9 @@ class BackgroundTask(QThread):
             self.log("Cookie consent declined.")
         except Exception as e:
             self.log("No cookie consent button found or it was not needed.")
-        
+
         return page  # Return the page for further use
-        
+
     async def extract_words_and_descriptions(self):
         async with async_playwright() as p:
             browser = None
@@ -234,10 +241,10 @@ class BackgroundTask(QThread):
             # Launch the selected browser without a profile
             if self.browser_choice == "Chromium":
                 self.log("Launching Chromium / Google Chrome...")
-                browser = await p.chromium.launch(headless=False)
+                browser = await p.chromium.launch(headless=True)
             elif self.browser_choice == "Firefox":
                 self.log("Launching Firefox...")
-                browser = await p.firefox.launch(headless=False)
+                browser = await p.firefox.launch(headless=True)
 
             page = await browser.new_page()
 
@@ -252,6 +259,7 @@ class BackgroundTask(QThread):
             self.log("Navigating to vocabulary page...")
             await page.goto('https://www.duolingo.com/practice-hub/words')
 
+            self.log("Scraping words...")
             await page.wait_for_selector('.AeY9P')
 
             words = []
@@ -288,7 +296,7 @@ class BackgroundTask(QThread):
         if not words or not descriptions:
             self.log("No words or descriptions to add to the deck.")
             return
-    
+
         my_model = genanki.Model(
             model_id=random.randint(1, 2**30),  # Generate a unique ID
             name='Basic Reversed Model',
@@ -315,7 +323,7 @@ class BackgroundTask(QThread):
             name=self.deck_name,
         )
 
-        for word, description in zip(words, descriptions):      
+        for word, description in zip(words, descriptions):
             if word and description:  # Check if both fields are not empty
                 forward_note = genanki.Note(
                     model=my_model,
